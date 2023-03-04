@@ -43,10 +43,16 @@ class Sensors {
                 DEBUGPORT.println("Couldn't find INA260 A chip");
                 sensorsValid = false;
             }
+            else {
+                DEBUGPORT.println("System INA260 OK");
+            }
 
             if (!_ina260_b.begin(INA260_STROBE_ADDR)) {
                 DEBUGPORT.println("Couldn't find INA260 B chip");
                 sensorsValid = false;
+            }
+            else {
+                DEBUGPORT.println("Strobe INA260 OK");
             }
             
             

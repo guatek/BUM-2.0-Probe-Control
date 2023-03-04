@@ -167,46 +167,50 @@ class SystemControl
                         }
 
                         // SETTIME (set time from string)
-                        if (cmd != NULL && strncmp_ci(cmd,SETTIME, 7) == 0) {
+                        else if (cmd != NULL && strncmp_ci(cmd,SETTIME, 7) == 0) {
                             setTime(rest, in);
                         }
 
                         // WRITECONFIG (save the current config to EEPROM)
-                        if (cmd != NULL && strncmp_ci(cmd,WRITECONFIG, 11) == 0) {
+                        else if (cmd != NULL && strncmp_ci(cmd,WRITECONFIG, 11) == 0) {
                             writeConfig();
                         }
 
                         // READCONFIG (read the current config to EEPROM)
-                        if (cmd != NULL && strncmp_ci(cmd,READCONFIG, 10) == 0) {
+                        else if (cmd != NULL && strncmp_ci(cmd,READCONFIG, 10) == 0) {
                             readConfig();
                         }
 
-                        if (cmd != NULL && strncmp_ci(cmd,CAMERAON,8) == 0) {
+                        else if (cmd != NULL && strncmp_ci(cmd,CAMERAON,8) == 0) {
                             if (confirm(in, "Are you sure you want to power ON camera ? [y/N]: ", cfg.getInt(CMDTIMEOUT)))
                                 turnOnCamera();
                         }
 
-                        if (cmd != NULL && strncmp_ci(cmd,CAMERAOFF,9) == 0) {
+                        else if (cmd != NULL && strncmp_ci(cmd,CAMERAOFF,9) == 0) {
                             if (confirm(in, "Are you sure you want to power OFF camera ? [y/N]: ", cfg.getInt(CMDTIMEOUT)))
                                 turnOffCamera();
                         }
 
-                        if (cmd != NULL && strncmp_ci(cmd,SHUTDOWNJETSON,14) == 0) {
+                        else if (cmd != NULL && strncmp_ci(cmd,SHUTDOWNJETSON,14) == 0) {
                             if (confirm(in, "Are you sure you want to shutdown jetson ? [y/N]: ", cfg.getInt(CMDTIMEOUT)))
                                 sendShutdown();
                         }
 
-                        if (cmd != NULL && strncmp_ci(cmd,NEWEVENT,8) == 0) {
+                        else if (cmd != NULL && strncmp_ci(cmd,NEWEVENT,8) == 0) {
                             sch->timeEventUI(in, &cfg, cfg.getInt(CMDTIMEOUT));
                         }
 
-                        if (cmd != NULL && strncmp_ci(cmd,PRINTEVENTS,8) == 0) {
+                        else if (cmd != NULL && strncmp_ci(cmd,PRINTEVENTS,8) == 0) {
                             sch->printEvents(in);
                         }
 
-                        if (cmd != NULL && strncmp_ci(cmd,CLEAREVENTS,8) == 0) {
+                        else if (cmd != NULL && strncmp_ci(cmd,CLEAREVENTS,8) == 0) {
                             if (confirm(in, "Are you sure you want clear all events ? [y,N]: ", cfg.getInt(CMDTIMEOUT)))
                                 sch->clearEvents();
+                        }
+
+                        else if (cmd != NULL && strncmp_ci(cmd,GOTOSLEEP,9) == 0) {
+                            goToSleep();
                         }
 
                         // Reset the buffer and print out the prompt
@@ -304,16 +308,6 @@ class SystemControl
     }
 
     bool begin() {
-
-        //Turn off strobe and camera power
-        pinMode(CAMERA_POWER, OUTPUT);
-        pinMode(STROBE_POWER, OUTPUT);
-
-        digitalWrite(CAMERA_POWER, LOW);
-        digitalWrite(STROBE_POWER, HIGH);
-
-        // Setup Sd Card Pins
-        pinMode(SDCARD_DETECT, INPUT_PULLUP);
 
 
         // Start RTC
@@ -704,20 +698,25 @@ class SystemControl
                 sendShutdown();
             }
             if (cfg.getInt(STANDBY) == 1 && !cameraOn) {
-
-                printAllPorts("Going to sleep...");
-                _zerortc.setAlarmTime(0, 0, 0);
-                if (cfg.getInt(CHECKHOURLY) == 1) {
-                    _zerortc.enableAlarm(RTCZero::MATCH_MMSS);
-                }
-                else {
-                    _zerortc.enableAlarm(RTCZero::MATCH_SS);
-                }
-                if (cfg.getInt(STANDBY) == 1) {
-                    DEBUGPORT.println("Would go into stanby here but currently disabled.");
-                    //_zerortc.standbyMode();
-                }
+                goToSleep();
             }
+        }
+    }
+
+    void goToSleep() {
+        
+        printAllPorts("Going to sleep...");
+        _zerortc.setAlarmTime(0, 0, 0);
+        if (cfg.getInt(CHECKHOURLY) == 1) {
+            printAllPorts("Alarm Set for 1 Hour");
+            _zerortc.enableAlarm(RTCZero::MATCH_MMSS);
+        }
+        else {
+            printAllPorts("Alarm Set for 1 Minute");
+            _zerortc.enableAlarm(RTCZero::MATCH_SS);
+        }
+        if (cfg.getInt(STANDBY) == 1) {
+            _zerortc.standbyMode();
         }
     }
 

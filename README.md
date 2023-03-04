@@ -1,11 +1,11 @@
-# Dual-Mag-Control
+# BUM 2.0 Console-Control
 ![version](https://img.shields.io/badge/version-1.0.0-blue.svg) ![license](https://img.shields.io/badge/license-MIT-blue.svg) 
 
-Dual-Mag-Control is an Arduino (C++) firmware for controlling the Guatek-Dual-Mag system built in 2020, revA. The system is designed around a [LowPowerLabs](https://lowpowerlab.com/) [Moteino M0](https://lowpowerlab.com/category/moteino/moteinom0/), which is a compact and pin-rich breakout board for the Atmel SAMD21.
+Console-Control is an Arduino (C++) firmware for controlling the Guatek BUM 2.0 Console system built in 2022, revA. The system is designed around a [LowPowerLabs](https://lowpowerlab.com/) [Moteino M0](https://lowpowerlab.com/category/moteino/moteinom0/), which is a compact and pin-rich breakout board for the Atmel SAMD21.
 
 ## Requirements
 
-- [Dual-Mag-Control RevA](https://github.com/guatek/KiCAD-Dual-Mag/tree/master/Dual-Mag-Camera-Control) hardware
+- [Console-Control RevA](https://github.com/guatek/KiCAD-BUM-2.0/tree/master/Console-Controller) hardware
 - [Arduino](https://www.arduino.cc/en/software)
 - [LowPowerLab SAMD Release](https://lowpowerlab.com/2020/03/04/moteino-samd-1-5-0-release/)
 
@@ -55,6 +55,6 @@ If you need support beyond github please use our [Contact Page](http://www.guate
 
 ## Licensing
 
-- Copyright 2021 Guatek (http://www.guatek.com)
+- Copyright 2022 Guatek (http://www.guatek.com)
 - Licensed under MIT (https://github.com/guatek/Dual-Mag-Control/blob/master/LICENSE.md)
 
