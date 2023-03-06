@@ -65,9 +65,12 @@ void setup() {
     //Turn off strobe and camera power
     pinMode(CAMERA_POWER, OUTPUT);
     pinMode(STROBE_POWER, OUTPUT);
+    pinMode(LED1_EN, OUTPUT);
+    pinMode(LED2_EN, OUTPUT);
 
-    digitalWrite(CAMERA_POWER, LOW);
-    digitalWrite(STROBE_POWER, HIGH);
+    digitalWrite(LED1_EN, LOW);
+    digitalWrite(LED2_EN, LOW);
+
 
     // Setup Sd Card Pins
     //pinMode(SDCARD_DETECT, INPUT_PULLUP);

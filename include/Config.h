@@ -42,6 +42,11 @@ void SERCOM1_Handler()
   Serial3.IrqHandler();
 }
 
+// Power Control
+#define LED1_EN 13
+#define LED2_EN 11
+
+
 // Define GPIOs
 #define GPIO_1_IO 42
 #define GPIO_2_IO SWIO
@@ -49,8 +54,11 @@ void SERCOM1_Handler()
 
 // Define Triggers
 #define TRIG_4_0 A1
+#define TRIG_4_1 A2
 #define TRIG_1_0 8
-#define TRIG_0_0 4
+#define TRIG_1_1 9
+#define TRIG_0_0 5
+#define TRIG_0_1 3
 
 // Define Trigger pins
 #define HIGH_MAG_CAM_TRIG GPIO_2_IO
@@ -60,9 +68,6 @@ void SERCOM1_Handler()
 #define FLASH_TYPE_PIN TRIG_1_0
 
 // Define SD CARD PINS
-#define SDCARD_DETECT GPIO_1_IO
-#define SDCARD_ENABLE 11
-#define SDCARD_CS 13
 
 #define DEBUGPORT Serial
 #define HWPORT0 Serial0

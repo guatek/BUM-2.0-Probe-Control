@@ -8,6 +8,7 @@
 
 void Blink(int DELAY_MS, byte loops)
 {
+    return;
     pinMode(LED_BUILTIN, OUTPUT);
     while (loops--)
     {
