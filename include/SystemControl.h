@@ -11,7 +11,6 @@
 #include "SPIFlash.h"
 #include "Sensors.h"
 #include "Stats.h"
-#include "Scheduler.h"
 #include "SystemConfig.h"
 #include "SystemTrigger.h"
 #include "RBRInstrument.h"
@@ -96,8 +95,6 @@ class SystemControl
     MovingAverage<float> avgTemp;
     MovingAverage<float> avgHum;
     MovingAverage<float> avgDepth;
-
-    Scheduler * sch;
     
     void readInput(Stream *in) {
       
@@ -198,19 +195,6 @@ class SystemControl
                         else if (cmd != NULL && strncmp_ci(cmd,SHUTDOWNJETSON,14) == 0) {
                             if (confirm(in, "Are you sure you want to shutdown jetson ? [y/N]: ", cfg.getInt(CMDTIMEOUT)))
                                 sendShutdown();
-                        }
-
-                        else if (cmd != NULL && strncmp_ci(cmd,NEWEVENT,8) == 0) {
-                            sch->timeEventUI(in, &cfg, cfg.getInt(CMDTIMEOUT));
-                        }
-
-                        else if (cmd != NULL && strncmp_ci(cmd,PRINTEVENTS,8) == 0) {
-                            sch->printEvents(in);
-                        }
-
-                        else if (cmd != NULL && strncmp_ci(cmd,CLEAREVENTS,8) == 0) {
-                            if (confirm(in, "Are you sure you want clear all events ? [y,N]: ", cfg.getInt(CMDTIMEOUT)))
-                                sch->clearEvents();
                         }
 
                         else if (cmd != NULL && strncmp_ci(cmd,GOTOSLEEP,9) == 0) {
@@ -381,12 +365,6 @@ class SystemControl
         }
     }
 
-    void loadScheduler() {
-        // Load scheduler
-        sch = new Scheduler(SCHEDULER_UID, &_flash);
-        storeLastFlashConfig();
-    }
-
     void configWatchdog() {
         // enable hardware watchdog if requested
         if (cfg.getInt(WATCHDOG) > 0) {
@@ -450,84 +428,11 @@ class SystemControl
         // Build log string and send to UIs
         char output[256];
 
-        float c = -1.0;
-        float t = -1.0;
-        float d = -1.0;
-        currentDepth = d;
-
         uint32_t unixtime; 
 
         char timeString[64];
         getTimeString(timeString);
 
-        if (cfg.getInt(ECHORBR) == 1)
-            _rbr.setEchoData(true);
-        else
-            _rbr.setEchoData(false);
-
-        if (_rbr.haveNewData()) {
-            c = _rbr.conductivity();
-            t = _rbr.temperature();
-            d = _rbr.pressure();
-            currentDepth = d;
-            if (cfg.getInt(USERBRCLOCK) && _zerortc.getEpoch() - clockSyncTimer > 60) {
-                char timeBuffer[64];
-                _rbr.getTimeString(timeBuffer);
-                this->setTime(timeBuffer, &DEBUGPORT);
-                clockSyncTimer = _zerortc.getEpoch();
-            }
-            _rbr.invalidateData();
-
-            bool depthCheckOkay = false;
-            if (lastDepth > -1.0 && fabs(currentDepth - lastDepth) < 20) {
-                depthCheckOkay = true;
-            }
-
-            // Check state (float up, down ratchet)
-            if (unixtime - lastDepthCheck > (unsigned int)cfg.getInt(DEPTHCHECKINTERVAL)) {
-                float delta_depth = d - lastDepth;
-                if (depthCheckOkay && (state == -1 || state == 0) && delta_depth > ((float)cfg.getInt(DEPTHTHRESHOLD))/1000) {
-                    state = 1; // ascent to descent
-                }
-                if (depthCheckOkay && (state == 1 || state == 0)  && delta_depth < ((float)cfg.getInt(DEPTHTHRESHOLD))/1000) {
-                    state = -1; // descent to ascent
-                }
-                lastDepthCheck = unixtime;
-                lastDepth = d;
-            }
-
-            // Check depth limits if requested
-            bool depthValid = true;
-            if (depthCheckOkay && cfg.getInt(MINDEPTH) > -1000 && cfg.getInt(MAXDEPTH) > -1000) {
-                
-                // Set depth invalid until we confirm it's within the limits
-                depthValid = false;
-
-                // Note that the min/max depth param is in mm and currentDepth is in dBar
-                // multiply current depth by 1000 to get approximately depth in mm.
-                if ((cfg.getInt(MINDEPTH) < currentDepth*1000) && (cfg.getInt(MAXDEPTH) > currentDepth*1000)) {
-                    depthValid = true;
-                }
-            }
-
-            if (cfg.getInt(PROFILEMODE) == 0) {
-                if (state == 1 || !depthValid) {
-                    if (cameraOn && !pendingPowerOff) {
-                        sendShutdown();
-                    }
-                }
-                if (state == -1 && depthValid) {
-                    if (!cameraOn && !pendingPowerOn) {
-                        pendingPowerOn = true;
-                        pendingPowerOnTimer = _zerortc.getEpoch();
-                    }
-                }
-            }
-            else if (!cameraOn && cfg.getInt(PROFILEMODE) == 1 && depthValid) {
-                pendingPowerOn = true;
-                pendingPowerOnTimer = _zerortc.getEpoch();
-            }
-        }
 
 
         // The system log string, note this requires enabling printf_float build
@@ -556,7 +461,6 @@ class SystemControl
     void writeConfig() {
         if (systemOkay) {
             cfg.writeConfig();
-            sch->writeToFlash();
         }
     }
 
@@ -577,33 +481,11 @@ class SystemControl
             _rbr.disableEcho();
             readInput(&UI2);
         }
-        _rbr.setEchoData(cfg.getInt(ECHORBR) == 1);
     }
 
     void checkCameraPower() {
 
-        // Check for power off flag
-        if (pendingPowerOff && ((_sensors.power[0] < 1000) || (_zerortc.getEpoch() - pendingPowerOffTimer > (unsigned int)cfg.getInt(MAXSHUTDOWNTIME)))) {
-            turnOffCamera();
-            pendingPowerOff = false;
-            return;
-        }
 
-        // Check depth range
-
-        // Never turn on camera if voltage is too low or env sensors are bad
-        if (lowVoltage || badEnv) {
-            return;
-        }
-
-        // turn on power under the following conditions:
-        // (1) another event requested power on
-        // (2) profile mode is set to always on
-        if (pendingPowerOn || (!cameraOn && cfg.getInt(PROFILEMODE) == (unsigned int)1)) {
-            printAllPorts("Powering ON camera...");
-            turnOnCamera();
-            pendingPowerOn = false;
-        }
     }
 
     void checkEnv() {
@@ -701,30 +583,6 @@ class SystemControl
         }
         if (cfg.getInt(STANDBY) == 1) {
             _zerortc.standbyMode();
-        }
-    }
-
-    void checkEvents() {
-        int result = sch->checkEvents(&_zerortc);
-        if (result == 1 && !pendingPowerOn && !cameraOn) {
-            // Store the current settings and set new ones
-            storeLastFlashConfig();
-            cfg.set(FLASHTYPE, sch->flashType);
-            cfg.set(FRAMERATE, sch->frameRate);
-            if (sch->flashType == 1) {
-                cfg.set(UVFLASH, sch->lowMagDuration);
-            }
-            else {
-                cfg.set(WHITEFLASH, sch->lowMagDuration);
-            }
-            configureFlashDurations();
-            setTriggers();
-            pendingPowerOn = true;
-            pendingPowerOnTimer = _zerortc.getEpoch();
-        }
-        else if (result == -1 && !pendingPowerOff && cameraOn) {
-            restoreLastFlashConfig();
-            sendShutdown();
         }
     }
 

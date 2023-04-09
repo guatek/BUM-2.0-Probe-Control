@@ -43,9 +43,6 @@ void setFlashes() {
     sys.configureFlashDurations();
 }
 
-void setCTDType() {
-    sys.setCTDType();
-}
 
 void setPolling() {
     sys.setPolling();
@@ -140,8 +137,6 @@ void setup() {
     // Load the last config from EEPROM
     sys.readConfig();
 
-    sys.loadScheduler();
-
     // Setup flashes triggers and polling
     setFlashes();
     setTriggers();
@@ -155,7 +150,6 @@ void loop() {
     sys.checkInput();
     sys.checkVoltage();
     sys.checkEnv();
-    sys.checkEvents();
     sys.checkCameraPower(); 
 
     int logInt = sys.cfg.getInt(LOGINT);
