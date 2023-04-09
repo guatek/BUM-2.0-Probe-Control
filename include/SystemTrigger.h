@@ -141,6 +141,17 @@ void configPolling(float freq, void (*callback)()) {
 
 }
 
+void doFlash(int flashType = WHITE_FLASH_TRIG, int triggerWidth = 1000, int flashDuration = 100) {
+    digitalWrite(CAMERA_TRIG,HIGH);
+    delayMicroseconds(triggerWidth/2);
+    digitalWrite(flashType,HIGH);
+    if (flashDuration-FLASH_DELAY_OFFSET >= MIN_FLASH_DURATION)
+        delayMicroseconds(flashDuration-FLASH_DELAY_OFFSET);
+    digitalWrite(flashType,LOW);
+    delayMicroseconds(triggerWidth/2);
+    digitalWrite(CAMERA_TRIG,LOW);
+}
+
 #endif
 
 

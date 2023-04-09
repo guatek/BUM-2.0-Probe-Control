@@ -191,6 +191,10 @@ class SystemControl
                                 turnOffCamera();
                         }
 
+                        else if (cmd != NULL && strncmp_ci(cmd,TESTFLASH,9) == 0) {
+                            testFlash();
+                        } 
+
                         else if (cmd != NULL && strncmp_ci(cmd,SHUTDOWNJETSON,14) == 0) {
                             if (confirm(in, "Are you sure you want to shutdown jetson ? [y/N]: ", cfg.getInt(CMDTIMEOUT)))
                                 sendShutdown();
@@ -290,8 +294,7 @@ class SystemControl
 
     SystemConfig cfg;
     int trigWidth;
-    int lowMagStrobeDuration;
-    int highMagStrobeDuration;
+    int lastStrobeDuration;
     int flashType;
     int frameRate;
   
@@ -359,12 +362,11 @@ class SystemControl
         lastFlashType = cfg.getInt(FLASHTYPE);
         lastFrameRate = cfg.getInt(FRAMERATE);
         if (lastFlashType == 1) {        
-            lastLowMagDuration = cfg.getInt(LOWMAGREDFLASH);
-            lastHighMagDuration = cfg.getInt(HIGHMAGREDFLASH);
+            lastStrobeDuration = cfg.getInt(UVFLASH);
         }
         else {
-            lastLowMagDuration = cfg.getInt(LOWMAGCOLORFLASH);
-            lastHighMagDuration = cfg.getInt(HIGHMAGCOLORFLASH);
+            lastStrobeDuration = cfg.getInt(WHITEFLASH);
+
         }
     }
 
@@ -372,12 +374,10 @@ class SystemControl
         cfg.set(FLASHTYPE, lastFlashType);
         cfg.set(FRAMERATE, lastFrameRate);
         if (lastFlashType == 1) {        
-            cfg.set(LOWMAGREDFLASH, lastLowMagDuration);
-            cfg.set(HIGHMAGREDFLASH, lastHighMagDuration);
+            cfg.set(UVFLASH, lastStrobeDuration);
         }
         else {
-            cfg.set(LOWMAGCOLORFLASH, lastLowMagDuration);
-            cfg.set(HIGHMAGCOLORFLASH, lastHighMagDuration);
+            cfg.set(WHITEFLASH, lastStrobeDuration);
         }
     }
 
@@ -426,14 +426,11 @@ class SystemControl
     void getTimeString(char * timeString) {
         
         sprintf(timeString,"%s","YYYY-MM-DD hh:mm:ss");
-        unsigned long unixtime;
         if (ds3231Okay) {
             DateTime now = _ds3231.now();
-            unixtime = now.unixtime();
             now.toString(timeString);
         }
         else {
-            unixtime = _zerortc.getEpoch();
             sprintf(timeString, "%04d-%02d-%02d %02d:%02d:%02d", 
                 _zerortc.getYear(),
                 _zerortc.getMonth(),
@@ -583,12 +580,6 @@ class SystemControl
         _rbr.setEchoData(cfg.getInt(ECHORBR) == 1);
     }
 
-    void printAllPorts(const char output[]) {
-        UI1.println(output);
-        UI2.println(output);
-        DEBUGPORT.println(output);
-    }
-
     void checkCameraPower() {
 
         // Check for power off flag
@@ -721,12 +712,10 @@ class SystemControl
             cfg.set(FLASHTYPE, sch->flashType);
             cfg.set(FRAMERATE, sch->frameRate);
             if (sch->flashType == 1) {
-                cfg.set(LOWMAGREDFLASH, sch->lowMagDuration);
-                cfg.set(HIGHMAGREDFLASH, sch->highMagDuration);
+                cfg.set(UVFLASH, sch->lowMagDuration);
             }
             else {
-                cfg.set(LOWMAGCOLORFLASH, sch->lowMagDuration);
-                cfg.set(HIGHMAGCOLORFLASH, sch->highMagDuration);
+                cfg.set(WHITEFLASH, sch->lowMagDuration);
             }
             configureFlashDurations();
             setTriggers();
@@ -756,14 +745,11 @@ class SystemControl
         trigWidth = cfg.getInt(TRIGWIDTH);
         flashType = cfg.getInt(FLASHTYPE);
         if (flashType == 0) {
-            digitalWrite(FLASH_TYPE_PIN,HIGH);
-            lowMagStrobeDuration = cfg.getInt(LOWMAGCOLORFLASH);
-            highMagStrobeDuration = cfg.getInt(HIGHMAGCOLORFLASH);
+            lastStrobeDuration = cfg.getInt(WHITEFLASH);
+
         }
         else {
-            digitalWrite(FLASH_TYPE_PIN,LOW);
-            lowMagStrobeDuration = cfg.getInt(LOWMAGREDFLASH);
-            highMagStrobeDuration = cfg.getInt(HIGHMAGREDFLASH);
+            lastStrobeDuration = cfg.getInt(UVFLASH);
         }
     }
 
@@ -777,9 +763,62 @@ class SystemControl
         configPolling(cfg.getInt(POLLFREQ), pollInstruments);
     }
 
-    void setCTDType() {
-        instrumentType = cfg.getInt(CTDTYPE);
+
+    void testFlash() {
+        int uv_mod = 20;
+        int flashCounter = 0;
+        DEBUGPORT.flush();
+        while (DEBUGPORT.available() <= 0) {
+            if (flashCounter % uv_mod == 0) {
+                doFlash(UV_FLASH_TRIG, 5000, 20);
+            }
+            else {
+                doFlash(WHITE_FLASH_TRIG, 5000, 20);
+            }
+            flashCounter++;
+            delay(50);
+        }
     }
+
+    /** 
+ * @brief Trigger the system using the settings in SP structure
+ *
+ * This is a core system trigger function used in many places 
+ * throughout the firmware.
+ *
+ * It checks flash settings trigger enabled and durations from
+ * the SP structure.
+ *
+ * A camera trigger is always generated, and only one type of 
+ * strobe trigger is generated based on that value of SP.triggerType
+ *
+ * To help simiply triggering ambient light images after measurement images
+ * the SP.imagesTriggered variable is moded by 2, and if even and SP.recordAmbient
+ * is enabled, the system will trigger and ambient light image after every measurement
+ * image.
+ */
+void triggerSystem() {
+    
+    digitalWrite(CAMERA_TRIG,HIGH);
+    delayMicroseconds(300);
+    switch(cfg.getInt(FLASHTYPE)) {
+        case 0:
+            digitalWrite(WHITE_FLASH_TRIG,HIGH);
+            delayMicroseconds(cfg.getInt(WHITEFLASH));
+                digitalWrite(WHITE_FLASH_TRIG,LOW);
+            break;
+        case 1:
+            digitalWrite(UV_FLASH_TRIG,HIGH);
+            delayMicroseconds(cfg.getInt(UVFLASH));
+            digitalWrite(UV_FLASH_TRIG,LOW);
+            break;
+        case 2:
+            delayMicroseconds(cfg.getInt(AMBIENT));
+            break;
+        
+    }
+    digitalWrite(CAMERA_TRIG,LOW);
+}
         
 };
 

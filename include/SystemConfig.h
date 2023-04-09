@@ -162,7 +162,7 @@ class ConfigParam {
             }
         }
 
-        bool setValFromString(char * input, int len) {
+        bool setValFromString(char * input) {
             T newVal;
             int result;
             if (isFloat) {
@@ -185,6 +185,25 @@ class ConfigParam {
                 return false;
             }
         }
+
+        bool checkValFromString(const char * input) {
+            T newVal;
+            int result;
+            if (isFloat) {
+                result = sscanf(input, "%f", (float*)&newVal);
+            }
+            else {
+                result = sscanf(input, "%d", (int*)&newVal);
+            }
+            if (result == 1 && newVal >= minVal && newVal <= maxVal) {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         void print(Stream * ui) {
             char buffer[256];
             sprintf(buffer,"%-18s [%7d,%7d,%7d] %s",
@@ -276,6 +295,35 @@ class SystemConfig {
             return 0.0;
         }
 
+        int getIntMin(const char * name) {
+            // Check int params
+            for (int i = 0; i < nIntParams; i++) {
+                if (strncmp_ci(intParams[i]->name, name, strlen(name)) == 0) {
+                    return intParams[i]->minVal;
+                }
+            }
+            return 0;
+        }
+
+        int getIntMax(const char * name) {
+            // Check int params
+            for (int i = 0; i < nIntParams; i++) {
+                if (strncmp_ci(intParams[i]->name, name, strlen(name)) == 0) {
+                    return intParams[i]->maxVal;
+                }
+            }
+            return 0;
+        }
+
+        int checkIntVal(const char * name, const char * newVal) {
+            for (int i = 0; i < nIntParams; i++) {
+                if (strncmp_ci(intParams[i]->name, name, strlen(name)) == 0) {
+                    return intParams[i]->checkValFromString(newVal);
+                }
+            }
+            return 0;
+        }
+
         template <class T>
         bool set(const char * name, T newVal) {
             // Check int params
@@ -318,7 +366,7 @@ class SystemConfig {
             // Check int params
             for (int i = 0; i < nIntParams; i++) {
                 if (strncmp_ci(intParams[i]->name, name, strlen(name)) == 0) {
-                    bool updated = intParams[i]->setValFromString(val, strlen(val));
+                    bool updated = intParams[i]->setValFromString(val);
                     if (updated) {
                         ui->print("\r\nUpdated : ");
                         intParams[i]->print(ui);
@@ -333,7 +381,7 @@ class SystemConfig {
             // check float params
             for (int i = 0; i < nFloatParams; i++) {
                 if (strncmp_ci(floatParams[i]->name, name, strlen(name)) == 0) {
-                    bool updated = floatParams[i]->setValFromString(val, strlen(val));
+                    bool updated = floatParams[i]->setValFromString(val);
                     if (updated) {
                         ui->print("\r\nUpdated : ");
                         floatParams[i]->print(ui);
