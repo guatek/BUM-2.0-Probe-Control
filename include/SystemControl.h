@@ -43,26 +43,6 @@ RBRInstrument _rbr;
 // SBE39 CTD
 SBE39 _sbe39;
 
-// Static polling function for instruments
-int instrumentType = 0;
-bool pollingEnable = false;
-bool echoRBR = false;
-void pollInstruments() {
-    if (!pollingEnable)
-        return;
-    switch (instrumentType) {
-        case 0:
-            _rbr.readData(&RBRPORT);
-            break;
-        case 1:
-            _sbe39.readData(&RBRPORT);
-            break;
-        default:
-            _rbr.readData(&RBRPORT);
-            break;
-    }   
-}
-
 class SystemControl
 {
     private:
@@ -428,8 +408,6 @@ class SystemControl
         // Build log string and send to UIs
         char output[256];
 
-        uint32_t unixtime; 
-
         char timeString[64];
         getTimeString(timeString);
 
@@ -437,18 +415,16 @@ class SystemControl
 
         // The system log string, note this requires enabling printf_float build
         // option work show any output for floating point values
-        sprintf(output, "%s,%s.%03u,%0.3f,%0.3f,%0.2f,%0.2f,%0.2f,%0.2f,%0.2f",
+        sprintf(output, "%s,%s.%03u,%0.3f,%0.3f,%0.2f,%0.2f,%0.2f",
 
             LOG_PROMPT,
             timeString,
             ((unsigned int) millis()) % 1000,
             _sensors.temperature, // In C
-            _sensors.pressure / 1000, // in kPa
+            _sensors.pressure / 1000.0, // in kPa
             _sensors.humidity, // in %
-            _sensors.voltage[0] / 1000, // In Volts
-            _sensors.power[0] / 1000, // in W
-            _sensors.voltage[1] / 1000, // In Volts
-            _sensors.power[1] / 1000 // in W
+            _sensors.voltage[0] / 1000.0, // In Volts
+            _sensors.power[0] / 1000.0 // in W
             
         );
 
@@ -616,12 +592,6 @@ class SystemControl
         configTriggers(cfg.getInt(FRAMERATE));
     }
 
-    void setPolling() {
-        pollingEnable = true;
-        configPolling(cfg.getInt(POLLFREQ), pollInstruments);
-    }
-
-
     void testFlash() {
         int uv_mod = 20;
         int flashCounter = 0;
@@ -638,7 +608,7 @@ class SystemControl
         }
     }
 
-    /** 
+/** 
  * @brief Trigger the system using the settings in SP structure
  *
  * This is a core system trigger function used in many places 

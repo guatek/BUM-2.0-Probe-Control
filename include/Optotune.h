@@ -14,6 +14,7 @@ class Optotune
 private:
 
 Stream * port;
+char buffer[64];
 
 int sendCommand(char * cmd, int len) {
     return port->println(cmd);
@@ -21,7 +22,11 @@ int sendCommand(char * cmd, int len) {
 
 public:
 
-Optotune(Stream * port) {
+Optotune() {
+
+}
+
+void setPort(Stream * port) {
     this->port = port;
 }
 

@@ -32,6 +32,8 @@ bool escapeReceived(Stream * in) {
 		if (c == 27)
 			return true;
 	}
+
+    return false;
 }
 
 /** 
@@ -121,7 +123,7 @@ void printAllPorts(const char output[]) {
     DEBUGPORT.println(output);
 }
 
-int strncmp_ci(const char * input, const char * command, int n) {
+int strncmp_ci(const char * input, const char * command, unsigned int n) {
     
     // string and command must match in length
     if (strlen(input) < n)

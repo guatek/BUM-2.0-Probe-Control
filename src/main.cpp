@@ -4,9 +4,15 @@
 #include "SystemTrigger.h"
 #include "SystemConfig.h"
 #include "Utils.h"
+#include "Optotune.h"
+#include "Sequence.h"
 
 // Global system control variable
 SystemControl sys;
+// Optotune lens
+Optotune etl;
+// Sequence processor
+Sequence seq;
 
 // High Mag Trigger Callback
 void HighMagCallback()
@@ -43,18 +49,12 @@ void setFlashes() {
     sys.configureFlashDurations();
 }
 
-
-void setPolling() {
-    sys.setPolling();
-}
-
 // wrapper for turning system on
 void turnOnCamera() {
     if (sys.cfg.getInt("PROFILEMODE") == 1) {
         sys.turnOnCamera();
     }
 }
-
 
 
 void setup() {
@@ -91,7 +91,6 @@ void setup() {
     // Add config parameters for system
     // IMPORTANT: add parameters at t he end of the list, otherwise you'll need to reflash the saved params in EEPROM before reading
     sys.cfg.addParam(LOGINT, "Time in ms between log events", "ms", 0, 100000, 250);
-    sys.cfg.addParam(POLLFREQ, "Rate of polling instruments", "Hz", 1, 50, 10, false, setPolling);
     sys.cfg.addParam(DEPTHCHECKINTERVAL, "Time in seconds between depth checks for testing ascent/descent", "s", 10, 300, 30);
     sys.cfg.addParam(DEPTHTHRESHOLD, "Depth change threshold to denote ascent or descent", "mm", 500, 10000, 1000);
     sys.cfg.addParam(LOCALECHO, "When > 0, echo serial input", "", 0, 1, 1);
@@ -140,7 +139,6 @@ void setup() {
     // Setup flashes triggers and polling
     setFlashes();
     setTriggers();
-    setPolling();
     
 }
 

@@ -45,10 +45,8 @@ void recordWhite(int dur) {
  * Record an measuring blue LED image
  *
  * @param dur The duration of LED flash while recording
- * @param power The power setting for the LEDs
  */
 void recordUV(int dur, int power) {
-	delayMicroseconds(300);
     digitalWrite(CAMERA_TRIG,1);
     delayMicroseconds(300);
     digitalWrite(UV_FLASH_TRIG,1);

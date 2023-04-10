@@ -1,15 +1,12 @@
 /** @file Sequence.h
  * @brief Imaging sequence functions for loading, parsing, and running commands 
  *
- * This is a C-style implementation of what would otherwise be a C++ class
- * to handle seqeunces of imaging commands from the user. It supports the 
- * following commands:
+ * This is a C++ rework of an existing C implementation 
  *
  * START 								-- Start the sequence \n
  * REPEAT, [iterations] 				-- Repeat the subsequent sequence from the next command till reaching END,  [iterations] times \n
  * AMBIENT, [duration]					-- Ambient light image with no flash \n
- * MEAS, [duration], [intensity]		-- Measuring light image with [duration] us flash and [intensity] flash intensity (0-100) \n
- * SAT, [duration], [intensity]			-- Saturating light image with [duration] us flash and [intensity] flash intensity (0-100) \n
+ * FLUOR, [duration]                    -- UV light image with [duration] us flash \n
  * WHITE, [duration]					-- White light image with [duration] us flash \n
  * MOVE, [pos]							-- Move actuators to [pos] \n
  * FOCALSTACK, [start], [stop], [inc]	-- Record focal stack while repeating commands at [inc] steps between [start] and [stop] actuator positions \n
@@ -39,7 +36,7 @@
 
 class Sequence {
 
-    private:
+private:
     /** SequenceCommandType */
     typedef enum {
         CMD_START = 0,      /**< Start the sequence (needed for REPEAT cmd) */
@@ -71,17 +68,25 @@ class Sequence {
     int startIndexList[MAX_RECURSION];  /**< Start index array for recursion */
     Command commands[MAX_COMMANDS];     /**< Command array, up to MAX_COMMANDS len. */
 
+public:
     /**
-     * @brief Instantiate the sequence object
-     * 
-     * @param cfg The already instantiated system config object
+     * @brief Default constructor
     */
-    Sequence(SystemControl * sys, Optotune * etl) {
-        this->sys = sys;
-        this->etl = etl;
+    Sequence() {
         this->end = false;
         this->idx = 0;
         this->startIdx = 0;
+    }
+
+
+    /**
+     * @brief Inititalizes the object with sys and etl pointers
+     * 
+     * @param cfg The already instantiated system config object
+    */
+    void init(SystemControl * sys, Optotune * etl) {
+        this->sys = sys;
+        this->etl = etl;
     }
 
 
@@ -102,15 +107,15 @@ class Sequence {
                 printAllPorts("END\r\n");
                 break;
             case CMD_REPEAT:
-                sprintf(output, "REPEAT,%u\r\n", command.dur);
+                sprintf(output, "REPEAT,%lu\r\n", command.dur);
                 printAllPorts(output);
                 break;
             case CMD_DELAY:
-                sprintf(output, "DELAY,%u\r\n", command.dur);
+                sprintf(output, "DELAY,%lu\r\n", command.dur);
                 printAllPorts(output);
                 break;
             case CMD_LONGDELAY:
-                sprintf(output, "LONGDELAY,%u\r\n", command.dur);
+                sprintf(output, "LONGDELAY,%lu\r\n", command.dur);
                 printAllPorts(output);
                 break;
             case CMD_MOVE:
@@ -122,15 +127,15 @@ class Sequence {
                 printAllPorts(output);
                 break;
             case CMD_WHITE:
-                sprintf(output, "WHITE,%u\r\n", command.dur);
+                sprintf(output, "WHITE,%lu\r\n", command.dur);
                 printAllPorts(output);
                 break;
             case CMD_FLUOR:
-                sprintf(output, "FLUOR,%u\r\n", command.dur);
+                sprintf(output, "FLUOR,%lu\r\n", command.dur);
                 printAllPorts(output);
                 break;
             case CMD_AMBIENT:
-                sprintf(output, "AMBIENT,%u\r\n", command.dur);
+                sprintf(output, "AMBIENT,%lu\r\n", command.dur);
                 printAllPorts(output);
                 break;
         }
@@ -454,7 +459,7 @@ class Sequence {
 
         // read commands, with 60 second timeout
         MillisTimer uiTimer;
-        int index = 0;
+
         while (uiTimer.elapsed() < (unsigned int)(sys->cfg.getInt("CMDTIMEOUT"))) {
 
             printAllPorts("\rLOAD > ");

@@ -206,13 +206,24 @@ class ConfigParam {
 
         void print(Stream * ui) {
             char buffer[256];
-            sprintf(buffer,"%-18s [%7d,%7d,%7d] %s",
+            if (isFloat) {
+                sprintf(buffer,"%-18s [%7f,%7f,%7f] %s",
                 name,
-                minVal,
-                val,
-                maxVal,
+                (float)minVal,
+                (float)val,
+                (float)maxVal,
                 desc
             );
+            }
+            else {
+                sprintf(buffer,"%-18s [%7d,%7d,%7d] %s",
+                    name,
+                    (int)minVal,
+                    (int)val,
+                    (int)maxVal,
+                    desc
+                );
+            }
             ui->println(buffer);
             //ui->print(name);
             //ui->print("  [ ");
