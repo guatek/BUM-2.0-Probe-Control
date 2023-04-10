@@ -274,8 +274,22 @@ class SystemControl
         badEnv = false;
     }
 
-    bool begin() {
+    bool configurePins() {
+        //Turn off strobe and camera power
+        pinMode(CAMERA_POWER, OUTPUT);
+        pinMode(STROBE_POWER, OUTPUT);
+        pinMode(LED1_EN, OUTPUT);
+        pinMode(LED2_EN, OUTPUT);
+        pinMode(WHITE_FLASH_TRIG, OUTPUT);
+        pinMode(UV_FLASH_TRIG, OUTPUT);
 
+        digitalWrite(LED1_EN, LOW);
+        digitalWrite(LED2_EN, LOW);
+        digitalWrite(WHITE_FLASH_TRIG, LOW);
+        digitalWrite(UV_FLASH_TRIG, LOW);
+    }
+
+    bool begin() {
 
         // Start RTC
         _zerortc.begin();
