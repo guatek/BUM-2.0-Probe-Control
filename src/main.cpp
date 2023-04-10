@@ -14,33 +14,12 @@ Optotune etl;
 // Sequence processor
 Sequence seq;
 
-// High Mag Trigger Callback
-void HighMagCallback()
-{
-    digitalWrite(HIGH_MAG_CAM_TRIG,HIGH);
-    delayMicroseconds(sys.trigWidth/2);
-    digitalWrite(HIGH_MAG_STROBE_TRIG,HIGH);
-    if (sys.lastStrobeDuration-FLASH_DELAY_OFFSET >= MIN_FLASH_DURATION)
-        delayMicroseconds(sys.lastStrobeDuration-FLASH_DELAY_OFFSET);
-    digitalWrite(HIGH_MAG_STROBE_TRIG,LOW);
-    delayMicroseconds(sys.trigWidth/2);
-    digitalWrite(HIGH_MAG_CAM_TRIG,LOW);
+// Wrappers for callbacks in sys
+
+void flashCallback() {
+    sys.triggerSystem();
 }
 
-// Low Mag Trigger Callback
-void LowMagCallback()
-{
-    digitalWrite(LOW_MAG_CAM_TRIG,HIGH);
-    delayMicroseconds(sys.trigWidth/2);
-    digitalWrite(LOW_MAG_STROBE_TRIG,HIGH);
-    if (sys.lastStrobeDuration-FLASH_DELAY_OFFSET >= MIN_FLASH_DURATION)
-        delayMicroseconds(sys.lastStrobeDuration-FLASH_DELAY_OFFSET);
-    digitalWrite(LOW_MAG_STROBE_TRIG,LOW);
-    delayMicroseconds(sys.trigWidth/2);
-    digitalWrite(LOW_MAG_CAM_TRIG,LOW);
-}
-
-// Wrapper for updaing timers and flashes from callback functions
 void setTriggers() {
     sys.setTriggers();
 }
@@ -49,41 +28,20 @@ void setFlashes() {
     sys.configureFlashDurations();
 }
 
-// wrapper for turning system on
-void turnOnCamera() {
-    if (sys.cfg.getInt("PROFILEMODE") == 1) {
-        sys.turnOnCamera();
-    }
-}
-
-
 void setup() {
 
-    //Turn off strobe and camera power
-    pinMode(CAMERA_POWER, OUTPUT);
-    pinMode(STROBE_POWER, OUTPUT);
-    pinMode(LED1_EN, OUTPUT);
-    pinMode(LED2_EN, OUTPUT);
-    pinMode(WHITE_FLASH_TRIG, OUTPUT);
-    pinMode(UV_FLASH_TRIG, OUTPUT);
+    // Place a delay before we start any setup to prevent haning the USB bus
+    // on a stuck processor
+    delay(2000);
 
-    digitalWrite(LED1_EN, LOW);
-    digitalWrite(LED2_EN, LOW);
-    digitalWrite(WHITE_FLASH_TRIG, LOW);
-    digitalWrite(UV_FLASH_TRIG, LOW);
-
+    // Setup hardware pins
+    sys.configurePins();
 
     // Setup Sd Card Pins
     //pinMode(SDCARD_DETECT, INPUT_PULLUP);
 
     // Start the debug port
     DEBUGPORT.begin(115200);
-
-    delay(4000);
-
-    // Wait until serial port is opened
-    //while (!Serial) { delay(10); }
-    //while (!Serial0) { delay(10); }
 
     // Startup all system processes
     sys.begin();
@@ -101,6 +59,7 @@ void setup() {
     sys.cfg.addParam(HWPORT3BAUD, "Serial Port 3 baud rate", "baud", 9600, 115200, 115200);
     sys.cfg.addParam(STROBEDELAY, "Time between camera trigger and strobe trigger in us", "us", 5, 1000, 50, false, setFlashes);
     sys.cfg.addParam(FRAMERATE, "Camera frame rate in Hz", "Hz", 1, 30, 10, false, setTriggers);
+    sys.cfg.addParam(IMAGINGMODE, "Default mode when imaging, 0 = white, 1 = fluor, 2 = split", "", 0, 0, 2);
     sys.cfg.addParam(TRIGWIDTH, "Width of the camera trigger pulse in us", "us", 30, 10000, 100, false, setFlashes);
     sys.cfg.addParam(AMBIENT, "Width of the ambient light exposure in us", "us", 30, 10000, 100, false, setFlashes);
     sys.cfg.addParam(WHITEFLASH, "Width of the white flash in us", "us", 1, 100000, 10, false, setFlashes);

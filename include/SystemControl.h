@@ -69,7 +69,9 @@ class SystemControl
     unsigned long envTimer;
     unsigned long voltageTimer;
 
-    int lastFlashType, lastLowMagDuration, lastHighMagDuration, lastFrameRate;
+    unsigned long imageCounter;
+
+    int lastFlashType;
 
     MovingAverage<float> avgVoltage;
     MovingAverage<float> avgTemp;
@@ -274,7 +276,7 @@ class SystemControl
         badEnv = false;
     }
 
-    bool configurePins() {
+    void configurePins() {
         //Turn off strobe and camera power
         pinMode(CAMERA_POWER, OUTPUT);
         pinMode(STROBE_POWER, OUTPUT);
@@ -333,30 +335,6 @@ class SystemControl
         
         return true;
 
-    }
-
-    void storeLastFlashConfig() {
-        // Set last config in case we call end event before start event
-        lastFlashType = cfg.getInt(FLASHTYPE);
-        lastFrameRate = cfg.getInt(FRAMERATE);
-        if (lastFlashType == 1) {        
-            lastStrobeDuration = cfg.getInt(UVFLASH);
-        }
-        else {
-            lastStrobeDuration = cfg.getInt(WHITEFLASH);
-
-        }
-    }
-
-    void restoreLastFlashConfig() {
-        cfg.set(FLASHTYPE, lastFlashType);
-        cfg.set(FRAMERATE, lastFrameRate);
-        if (lastFlashType == 1) {        
-            cfg.set(UVFLASH, lastStrobeDuration);
-        }
-        else {
-            cfg.set(WHITEFLASH, lastStrobeDuration);
-        }
     }
 
     void configWatchdog() {

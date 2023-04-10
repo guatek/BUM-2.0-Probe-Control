@@ -8,12 +8,8 @@
 #define MIN_FLASH_DURATION 1
 
 // Flash Triggers
-Adafruit_ZeroTimer highMagTimer = Adafruit_ZeroTimer(3);
-Adafruit_ZeroTimer lowMagTimer = Adafruit_ZeroTimer(5);
-
-// Sensor Polling
-Adafruit_ZeroTimer pollingTimer = Adafruit_ZeroTimer(4);
-
+Adafruit_ZeroTimer flashTimer = Adafruit_ZeroTimer(3);
+void flashCallback();
 
 //define the interrupt handlers
 void TC3_Handler(){
@@ -27,9 +23,6 @@ void TC4_Handler(){
 void TC5_Handler(){
   Adafruit_ZeroTimer::timerHandler(5);
 }
-
-void HighMagCallback();
-void LowMagCallback();
 
 void configTimer(float freq, uint16_t * divider, uint16_t * compare, tc_clock_prescaler * prescaler) {
        // Set up the flexible divider/compare
@@ -79,12 +72,6 @@ void configTimer(float freq, uint16_t * divider, uint16_t * compare, tc_clock_pr
 
 void configTriggers(float freq) {
 
-    pinMode(HIGH_MAG_CAM_TRIG,OUTPUT);
-    pinMode(LOW_MAG_CAM_TRIG,OUTPUT);
-    pinMode(HIGH_MAG_STROBE_TRIG,OUTPUT);
-    pinMode(LOW_MAG_STROBE_TRIG,OUTPUT);
-    pinMode(FLASH_TYPE_PIN,OUTPUT);
-
     Serial.println("Trigger Configuration");
 
     Serial.print("Desired freq (Hz):");
@@ -96,48 +83,15 @@ void configTriggers(float freq) {
 
     configTimer(freq, &divider, &compare, &prescaler);
 
-    highMagTimer.enable(false);
-    highMagTimer.configure(prescaler,       // prescaler
+    flashTimer.enable(false);
+    flashTimer.configure(prescaler,       // prescaler
             TC_COUNTER_SIZE_16BIT,       // bit width of timer/counter
             TC_WAVE_GENERATION_MATCH_PWM // frequency or PWM mode
             );
 
-    highMagTimer.setCompare(0, compare);
-    highMagTimer.setCallback(true, TC_CALLBACK_CC_CHANNEL0, HighMagCallback);
-    highMagTimer.enable(true);
-
-    configTimer(freq, &divider, &compare, &prescaler);
-
-    lowMagTimer.enable(false);
-    lowMagTimer.configure(prescaler,       // prescaler
-            TC_COUNTER_SIZE_16BIT,       // bit width of timer/counter
-            TC_WAVE_GENERATION_MATCH_PWM // frequency or PWM mode
-            );
-
-    lowMagTimer.setCompare(0, compare);
-    lowMagTimer.setCallback(true, TC_CALLBACK_CC_CHANNEL0, LowMagCallback);
-    lowMagTimer.enable(true);
-
-
-}
-
-void configPolling(float freq, void (*callback)()) {
-
-    uint16_t divider  = 1;
-    uint16_t compare = 0;
-    tc_clock_prescaler prescaler = TC_CLOCK_PRESCALER_DIV1;
-
-    configTimer(freq, &divider, &compare, &prescaler);
-
-    pollingTimer.enable(false);
-    pollingTimer.configure(prescaler,       // prescaler
-            TC_COUNTER_SIZE_8BIT,       // bit width of timer/counter
-            TC_WAVE_GENERATION_MATCH_PWM // frequency or PWM mode
-            );
-
-    pollingTimer.setCompare(0, compare);
-    pollingTimer.setCallback(true, TC_CALLBACK_CC_CHANNEL0, callback);
-    pollingTimer.enable(true);
+    flashTimer.setCompare(0, compare);
+    flashTimer.setCallback(true, TC_CALLBACK_CC_CHANNEL0, flashCallback);
+    flashTimer.enable(true);
 
 }
 
