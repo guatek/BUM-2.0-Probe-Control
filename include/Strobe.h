@@ -46,7 +46,7 @@ void recordWhite(int dur) {
  *
  * @param dur The duration of LED flash while recording
  */
-void recordUV(int dur, int power) {
+void recordUV(int dur) {
     digitalWrite(CAMERA_TRIG,1);
     delayMicroseconds(300);
     digitalWrite(UV_FLASH_TRIG,1);

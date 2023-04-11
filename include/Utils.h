@@ -231,8 +231,8 @@ bool readUIInput(Stream * port, char * buf, int maxLength) {
     bool recvd = false;
     MillisTimer uiTimer;
 
-	if (!port->available())
-		return false;
+	//if (!port->available())
+	//	return false;
 
 
     uiTimer.reset();

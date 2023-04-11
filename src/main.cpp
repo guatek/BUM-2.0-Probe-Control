@@ -4,20 +4,14 @@
 #include "SystemTrigger.h"
 #include "SystemConfig.h"
 #include "Utils.h"
-#include "Optotune.h"
-#include "Sequence.h"
 
 // Global system control variable
 SystemControl sys;
-// Optotune lens
-Optotune etl;
-// Sequence processor
-Sequence seq;
 
 // Wrappers for callbacks in sys
 
 void flashCallback() {
-    sys.triggerSystem();
+    sys.triggerImage();
 }
 
 void setTriggers() {
@@ -37,9 +31,6 @@ void setup() {
     // Setup hardware pins
     sys.configurePins();
 
-    // Setup Sd Card Pins
-    //pinMode(SDCARD_DETECT, INPUT_PULLUP);
-
     // Start the debug port
     DEBUGPORT.begin(115200);
 
@@ -47,7 +38,7 @@ void setup() {
     sys.begin();
 
     // Add config parameters for system
-    // IMPORTANT: add parameters at t he end of the list, otherwise you'll need to reflash the saved params in EEPROM before reading
+    // IMPORTANT: add parameters at the end of the list, otherwise you'll need to reflash the saved params in EEPROM before reading
     sys.cfg.addParam(LOGINT, "Time in ms between log events", "ms", 0, 100000, 250);
     sys.cfg.addParam(DEPTHCHECKINTERVAL, "Time in seconds between depth checks for testing ascent/descent", "s", 10, 300, 30);
     sys.cfg.addParam(DEPTHTHRESHOLD, "Depth change threshold to denote ascent or descent", "mm", 500, 10000, 1000);
@@ -57,9 +48,10 @@ void setup() {
     sys.cfg.addParam(HWPORT1BAUD, "Serial Port 1 baud rate", "baud", 9600, 115200, 115200);
     sys.cfg.addParam(HWPORT2BAUD, "Serial Port 2 baud rate", "baud", 9600, 115200, 115200);
     sys.cfg.addParam(HWPORT3BAUD, "Serial Port 3 baud rate", "baud", 9600, 115200, 115200);
+    sys.cfg.addParam(TRIGENABLED, "When = 1, enable timer driven trigger events, set to 0 to disable", "", 0, 1, 1);
     sys.cfg.addParam(STROBEDELAY, "Time between camera trigger and strobe trigger in us", "us", 5, 1000, 50, false, setFlashes);
     sys.cfg.addParam(FRAMERATE, "Camera frame rate in Hz", "Hz", 1, 30, 10, false, setTriggers);
-    sys.cfg.addParam(IMAGINGMODE, "Default mode when imaging, 0 = white, 1 = fluor, 2 = split", "", 0, 0, 2);
+    sys.cfg.addParam(IMAGINGMODE, "Default mode when imaging, 0 = white, 1 = fluor, 2 = split", "", 0, 2, 0);
     sys.cfg.addParam(TRIGWIDTH, "Width of the camera trigger pulse in us", "us", 30, 10000, 100, false, setFlashes);
     sys.cfg.addParam(AMBIENT, "Width of the ambient light exposure in us", "us", 30, 10000, 100, false, setFlashes);
     sys.cfg.addParam(WHITEFLASH, "Width of the white flash in us", "us", 1, 100000, 10, false, setFlashes);

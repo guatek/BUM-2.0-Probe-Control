@@ -42,6 +42,9 @@ void SERCOM1_Handler()
   Serial3.IrqHandler();
 }
 
+// Macros
+#define MAX_MACROS 6
+
 // Power Control
 #define LED1_EN 13
 #define LED2_EN 11
@@ -60,27 +63,19 @@ void SERCOM1_Handler()
 #define TRIG_0_0 4
 #define TRIG_0_1 3
 
-// Define Trigger pins
-#define HIGH_MAG_CAM_TRIG GPIO_2_IO
-#define LOW_MAG_CAM_TRIG GPIO_3_IO
-#define HIGH_MAG_STROBE_TRIG TRIG_0_0
-#define LOW_MAG_STROBE_TRIG TRIG_4_0
-#define FLASH_TYPE_PIN TRIG_1_0
-
 // Define flash triggers
 #define WHITE_FLASH_TRIG 7
 #define UV_FLASH_TRIG 6
-
 #define CAMERA_TRIG 4 
 
-// Define SD CARD PINS
-
+// Serial ports
 #define DEBUGPORT Serial
 #define HWPORT0 Serial0
 #define HWPORT1 Serial1
 #define HWPORT2 Serial2
 #define HWPORT3 Serial3
 
+// Mapping serial ports to UI ports
 #define UI1 HWPORT0
 #define UI2 HWPORT2
 #define JETSONPORT HWPORT1
@@ -97,6 +92,7 @@ void SERCOM1_Handler()
 #define HWPORT2BAUD "HWPORT2BAUD"
 #define HWPORT3BAUD "HWPORT3BAUD"
 #define STROBEDELAY "STROBEDELAY"
+#define TRIGENABLED "TRIGENABLED"
 #define FRAMERATE "FRAMERATE"
 #define TRIGWIDTH "TRIGWIDTH"
 #define WHITEFLASH "WHITEFLASH"
@@ -137,6 +133,8 @@ void SERCOM1_Handler()
 #define CLEAREVENTS "CLEAREVENTS"
 #define GOTOSLEEP "GOTOSLEEP"
 #define TESTFLASH "TESTFLASH"
+#define LOADSEQ "LOADSEQ"
+#define RUNSEQ "RUNSEQ"
 
 
 #endif

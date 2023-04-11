@@ -16,10 +16,12 @@
 #include "RBRInstrument.h"
 #include "SBE39.h"
 #include "Utils.h"
+#include "Optotune.h"
+#include "Sequence.h"
 
 #define CMD_CHAR '!'
-#define PROMPT "DMCTRL > "
-#define LOG_PROMPT "$DMCTRL"
+#define PROMPT "PCTL > "
+#define LOG_PROMPT "$PCTL"
 #define CMD_BUFFER_SIZE 128
 
 #define STROBE_POWER 7
@@ -42,6 +44,12 @@ RBRInstrument _rbr;
 
 // SBE39 CTD
 SBE39 _sbe39;
+
+// Optotune lens
+Optotune _etl;
+
+// Sequence processors
+Sequence _seq[MAX_MACROS];
 
 class SystemControl
 {
@@ -143,6 +151,25 @@ class SystemControl
                         // PORTPASS (pass through to other serial ports)
                         if (cmd != NULL && strncmp_ci(cmd,PORTPASS, 8) == 0) {
                             doPortPass(in, rest);
+                        }
+
+                        //LOADSEQ,num
+                        else if (cmd != NULL && strncmp_ci(cmd,LOADSEQ, 7) == 0) {
+                            int num;
+                            sscanf(rest,"%d",&num);
+                            in->print("\n");
+                            if (num >= 0 && num < MAX_MACROS) {
+                                _seq[num].load_sequence(in);
+                            }
+                        }
+
+                        //RUNSEQ,num
+                        else if (cmd != NULL && strncmp_ci(cmd,RUNSEQ, 6) == 0) {
+                            int num;
+                            sscanf(rest,"%d",&num);
+                            if (num >= 0 && num < MAX_MACROS) {
+                                _seq[num].run_sequence(0,_seq[num].getIdx());
+                            }
                         }
 
                         // SETTIME (set time from string)
@@ -328,7 +355,16 @@ class SystemControl
 
         // Start sensors
         _sensors.begin();
-        
+
+        // Setup ETL and sequence processor
+        // Iniitialize the ETL
+        _etl.setPort(&HWPORT2);
+
+        // Initialize sequences
+        for (int i = 0; i < MAX_MACROS; i++) {
+            _seq[i].init(&cfg, &_etl);
+        }
+            
         return true;
 
     }
@@ -597,6 +633,11 @@ class SystemControl
     }
 
 void triggerImage() {
+
+    if (!(cfg.getInt(TRIGENABLED) == 1)) {
+        return;
+    }
+
     digitalWrite(CAMERA_TRIG,HIGH);
     delayMicroseconds(300);
     switch(cfg.getInt(IMAGINGMODE)) {
@@ -625,46 +666,6 @@ void triggerImage() {
     }
 }   
 
-/** 
- * @brief Trigger the system using the settings in SP structure
- *
- * This is a core system trigger function used in many places 
- * throughout the firmware.
- *
- * It checks flash settings trigger enabled and durations from
- * the SP structure.
- *
- * A camera trigger is always generated, and only one type of 
- * strobe trigger is generated based on that value of SP.triggerType
- *
- * To help simiply triggering ambient light images after measurement images
- * the SP.imagesTriggered variable is moded by 2, and if even and SP.recordAmbient
- * is enabled, the system will trigger and ambient light image after every measurement
- * image.
- */
-void triggerSystem() {
-    
-    digitalWrite(CAMERA_TRIG,HIGH);
-    delayMicroseconds(300);
-    switch(cfg.getInt(FLASHTYPE)) {
-        case 0:
-            digitalWrite(WHITE_FLASH_TRIG,HIGH);
-            delayMicroseconds(cfg.getInt(WHITEFLASH));
-            digitalWrite(WHITE_FLASH_TRIG,LOW);
-            break;
-        case 1:
-            digitalWrite(UV_FLASH_TRIG,HIGH);
-            delayMicroseconds(cfg.getInt(UVFLASH));
-            digitalWrite(UV_FLASH_TRIG,LOW);
-            break;
-        case 2:
-            delayMicroseconds(cfg.getInt(AMBIENT));
-            break;
-        
-    }
-    digitalWrite(CAMERA_TRIG,LOW);
-}
-        
 };
 
 #endif

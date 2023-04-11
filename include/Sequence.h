@@ -24,13 +24,13 @@
 #define _SEQUENCE
 
 #include "Config.h"
-#include "SystemControl.h"
+#include "SystemConfig.h"
 #include "Utils.h"
 #include "Strobe.h"
 #include "Optotune.h"
 
 #define MAX_STRING_LEN 128  /**< Maximum length of string for pritning status */
-#define MAX_COMMANDS 512    /**< Maximum number of commands in a sequence */
+#define MAX_COMMANDS 64    /**< Maximum number of commands in a sequence */
 #define MAX_RECURSION 16    /**< Maximum number of recursions in a sequence */
 
 
@@ -60,7 +60,7 @@ private:
         unsigned short inc;         /**< increment of actuator (if applicable) */ 
     };
 
-    SystemControl * sys;                /**< Pointer to the system config object */
+    SystemConfig * cfg;                /**< Pointer to the system config object */
     Optotune * etl;                     /**< Pointer to the optotune ETL object */
     bool end;                           /**< True when sequence should end */
     int idx;                            /**< Index of mos recent command */
@@ -84,9 +84,57 @@ public:
      * 
      * @param cfg The already instantiated system config object
     */
-    void init(SystemControl * sys, Optotune * etl) {
-        this->sys = sys;
+    void init(SystemConfig * cfg, Optotune * etl) {
+        this->cfg = cfg;
         this->etl = etl;
+    }
+
+    /**
+     * @brief Returns the value of the sequence index
+     * 
+    */
+    int getIdx() {
+        return this->idx;
+    }
+
+    /** 
+     * @brief Trigger the system using the settings in SP structure
+     *
+     * This is a core system trigger function used in many places 
+     * throughout the firmware.
+     *
+     * It checks flash settings trigger enabled and durations from
+     * the SP structure.
+     *
+     * A camera trigger is always generated, and only one type of 
+     * strobe trigger is generated based on that value of SP.triggerType
+     *
+     * To help simiply triggering ambient light images after measurement images
+     * the SP.imagesTriggered variable is moded by 2, and if even and SP.recordAmbient
+     * is enabled, the system will trigger and ambient light image after every measurement
+     * image.
+     */
+    void triggerSystem() {
+        
+        digitalWrite(CAMERA_TRIG,HIGH);
+        delayMicroseconds(300);
+        switch(cfg->getInt(FLASHTYPE)) {
+            case 0:
+                digitalWrite(WHITE_FLASH_TRIG,HIGH);
+                delayMicroseconds(cfg->getInt(WHITEFLASH));
+                digitalWrite(WHITE_FLASH_TRIG,LOW);
+                break;
+            case 1:
+                digitalWrite(UV_FLASH_TRIG,HIGH);
+                delayMicroseconds(cfg->getInt(UVFLASH));
+                digitalWrite(UV_FLASH_TRIG,LOW);
+                break;
+            case 2:
+                delayMicroseconds(cfg->getInt(AMBIENT));
+                break;
+            
+        }
+        digitalWrite(CAMERA_TRIG,LOW);
     }
 
 
@@ -153,6 +201,9 @@ public:
      */
     bool run_sequence(int startIndex, int endIndex) {
 
+        // Disable timer triggers
+        cfg->set(TRIGENABLED,0);
+
         char output[MAX_STRING_LEN];
 
         // Check if we halted the sequence early
@@ -207,18 +258,18 @@ public:
                     * to focal stack will use the last flash settings
                     */
                     case CMD_WHITE:
-                        sys->cfg.set(WHITEFLASH, this->commands[i].dur);
-                        sys->cfg.set(FLASHTYPE, 0);
+                        cfg->set(WHITEFLASH, this->commands[i].dur);
+                        cfg->set(FLASHTYPE, 0);
                         recordWhite(this->commands[i].dur);
                         break;
                     case CMD_FLUOR:
-                        sys->cfg.set(UVFLASH, this->commands[i].dur);
-                        sys->cfg.set(FLASHTYPE, 1);
-                        recordWhite(this->commands[i].dur);
+                        cfg->set(UVFLASH, this->commands[i].dur);
+                        cfg->set(FLASHTYPE, 1);
+                        recordUV(this->commands[i].dur);
                         break;
                     case CMD_AMBIENT:
-                        sys->cfg.set(AMBIENT, this->commands[i].dur);
-                        sys->cfg.set(FLASHTYPE, 2);
+                        cfg->set(AMBIENT, this->commands[i].dur);
+                        cfg->set(FLASHTYPE, 2);
                         recordAmbient(this->commands[i].dur);
                         break;
                     case CMD_MOVE:
@@ -247,7 +298,7 @@ public:
                                 start += inc;
                                 etl->move(start);
                                 // delay for the frame rate
-                                int frameRate = sys->cfg.getInt(FRAMERATE);
+                                int frameRate = cfg->getInt(FRAMERATE);
                                 if (frameRate > 0) {
                                     delayMicroseconds(1000000/frameRate);
                                 }
@@ -259,12 +310,15 @@ public:
             }
 
             // delay for the frame rate
-            int frameRate = sys->cfg.getInt(FRAMERATE);
+            int frameRate = cfg->getInt(FRAMERATE);
             if (frameRate > 0) {
                 delayMicroseconds(1000000/frameRate);
             }
 
         }
+
+        // Enable timer triggers
+        cfg->set(TRIGENABLED,1);
         
         return false;
 
@@ -299,7 +353,7 @@ public:
         // REPEAT
         else if (strncmp_ci(tok, "repeat", 6) == 0) {
             int iterations;
-            if (parseIntVal(rem,&iterations, 0, sys->cfg.getInt(MAXREPEAT))) {
+            if (parseIntVal(rem,&iterations, 0, cfg->getInt(MAXREPEAT))) {
                 this->commands[this->idx].cmd = CMD_REPEAT;
                 this->commands[this->idx++].dur = iterations; // stick iteraions in dur field
                 okay = true;
@@ -308,7 +362,7 @@ public:
         // DELAY
         else if (strncmp_ci(tok, "delay", 5) == 0) {
             int us_delay;
-            if (parseIntVal(rem,&us_delay, 0, sys->cfg.getInt(MAXDELAY))) {
+            if (parseIntVal(rem,&us_delay, 0, cfg->getInt(MAXDELAY))) {
                 this->commands[this->idx].cmd = CMD_DELAY;
                 this->commands[this->idx++].dur = us_delay;
                 okay = true;
@@ -319,9 +373,9 @@ public:
             }
         }
         // LONG_DELAY
-        else if (strncmp_ci(tok, "longdelay", 10) == 0) {
+        else if (strncmp_ci(tok, "longdelay", 9) == 0) {
             int s_delay;
-            if (parseIntVal(rem,&s_delay, 0, sys->cfg.getInt(MAXLONGDELAY))) {
+            if (parseIntVal(rem,&s_delay, 0, cfg->getInt(MAXLONGDELAY))) {
                 this->commands[this->idx].cmd = CMD_LONGDELAY;
                 this->commands[this->idx++].dur = s_delay;
                 okay = true;
@@ -334,7 +388,7 @@ public:
         // MOVE
         else if (strncmp_ci(tok, "move", 4) == 0) {
             int pos;
-            if (parseIntVal(rem,&pos, sys->cfg.getIntMin(FOCUSPOS), sys->cfg.getIntMax(FOCUSPOS))) {
+            if (parseIntVal(rem,&pos, cfg->getIntMin(FOCUSPOS), cfg->getIntMax(FOCUSPOS))) {
                 this->commands[this->idx].cmd = CMD_MOVE;
                 this->commands[this->idx++].start = pos;
                 okay = true;
@@ -347,30 +401,30 @@ public:
         // WHITE
         else if (strncmp_ci(tok, "white", 5) == 0) {
             int dur;
-            if (parseIntVal(rem,&dur, sys->cfg.getIntMin(WHITEFLASH), sys->cfg.getIntMax(WHITEFLASH))) {
+            if (parseIntVal(rem,&dur, cfg->getIntMin(WHITEFLASH), cfg->getIntMax(WHITEFLASH))) {
                 this->commands[this->idx].cmd = CMD_WHITE;
                 this->commands[this->idx++].dur = dur;
                 okay = true;
 
                 if (okay && online) {
-                    sys->cfg.set(WHITEFLASH, dur);
-                    sys->cfg.set(FLASHTYPE,0);
+                    cfg->set(WHITEFLASH, dur);
+                    cfg->set(FLASHTYPE,0);
                     recordAmbient(dur);
                 }
                 
             }
         }
         // FLUOR
-        else if (strncmp_ci(tok, "meas", 4) == 0) {
+        else if (strncmp_ci(tok, "fluor", 4) == 0) {
             int dur;
-            if (parseIntVal(rem,&dur, sys->cfg.getIntMin(UVFLASH), sys->cfg.getIntMax(UVFLASH))) {
+            if (parseIntVal(rem,&dur, cfg->getIntMin(UVFLASH), cfg->getIntMax(UVFLASH))) {
                 this->commands[this->idx].cmd = CMD_FLUOR;
                 this->commands[this->idx++].dur = dur;
                 okay = true;
 
                 if (okay && online) {
-                    sys->cfg.set(UVFLASH, dur);
-                    sys->cfg.set(FLASHTYPE,1);
+                    cfg->set(UVFLASH, dur);
+                    cfg->set(FLASHTYPE,1);
                     recordAmbient(dur);
                 }
                 
@@ -380,14 +434,14 @@ public:
         // AMBIENT
         else if (strncmp_ci(tok, "ambient", 7) == 0) {
             int dur;
-            if (parseIntVal(rem,&dur, sys->cfg.getIntMin(AMBIENT), sys->cfg.getIntMax(AMBIENT))) {
+            if (parseIntVal(rem,&dur, cfg->getIntMin(AMBIENT), cfg->getIntMax(AMBIENT))) {
                 this->commands[this->idx].cmd = CMD_AMBIENT;
                 this->commands[this->idx++].dur = dur;
                 okay = true;
 
                 if (okay && online) {
-                    sys->cfg.set(AMBIENT, dur);
-                    sys->cfg.set(FLASHTYPE,2);
+                    cfg->set(AMBIENT, dur);
+                    cfg->set(FLASHTYPE,2);
                     recordAmbient(dur);
                 }
                 
@@ -400,12 +454,12 @@ public:
             int inc;
             okay = true;
             tok = strtok_r(rem,",", &rem);
-            if (!parseIntVal(tok,&start, sys->cfg.getIntMin(FOCUSPOS), sys->cfg.getIntMax(FOCUSPOS)))
+            if (!parseIntVal(tok,&start, cfg->getIntMin(FOCUSPOS), cfg->getIntMax(FOCUSPOS)))
                 okay = false;
             tok = strtok_r(rem,",", &rem);
-            if (!okay || !parseIntVal(tok,&stop, sys->cfg.getIntMin(FOCUSPOS), sys->cfg.getIntMax(FOCUSPOS)))
+            if (!okay || !parseIntVal(tok,&stop, cfg->getIntMin(FOCUSPOS), cfg->getIntMax(FOCUSPOS)))
                 okay = false;
-            if (!okay || !parseIntVal(rem,&inc, sys->cfg.getIntMin(FOCUSINC), sys->cfg.getIntMax(FOCUSINC)))
+            if (!okay || !parseIntVal(rem,&inc, cfg->getIntMin(FOCUSINC), cfg->getIntMax(FOCUSINC)))
                 okay = false;
             if (okay) {
 
@@ -420,10 +474,10 @@ public:
                 while (start <= stop) {
                     if (escapeReceived())
                         break;
-                    sys->triggerSystem();			
+                    triggerSystem();			
                     start += inc;
                     etl->move(start);
-                    int frameRate = sys->cfg.getInt(FRAMERATE);
+                    int frameRate = cfg->getInt(FRAMERATE);
                     if (frameRate > 0) {
                         delayMicroseconds(1000000/frameRate);
                     }
@@ -460,9 +514,9 @@ public:
         // read commands, with 60 second timeout
         MillisTimer uiTimer;
 
-        while (uiTimer.elapsed() < (unsigned int)(sys->cfg.getInt("CMDTIMEOUT"))) {
+        while (uiTimer.elapsed() < (unsigned int)(cfg->getInt("CMDTIMEOUT"))) {
 
-            printAllPorts("\rLOAD > ");
+            in->print("\rLOAD > ");
 
             bool haveCmd = false;
 
@@ -480,7 +534,7 @@ public:
                 // reset timer
                 uiTimer.reset();
                 uiTimer.start();
-                printAllPorts("\r\n");
+                in->print("\r\n");
 
             }
             else {
@@ -488,7 +542,7 @@ public:
             }
         }
 
-        printAllPorts("\r\n");
+        in->print("\r\n");
 
         return true;
     }
