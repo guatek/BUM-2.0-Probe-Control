@@ -174,11 +174,6 @@ class SystemControl
                             testFlash();
                         } 
 
-                        else if (cmd != NULL && strncmp_ci(cmd,SHUTDOWNJETSON,14) == 0) {
-                            if (confirm(in, "Are you sure you want to shutdown jetson ? [y/N]: ", cfg.getInt(CMDTIMEOUT)))
-                                sendShutdown();
-                        }
-
                         else if (cmd != NULL && strncmp_ci(cmd,GOTOSLEEP,9) == 0) {
                             goToSleep();
                         }
@@ -274,6 +269,7 @@ class SystemControl
         cameraOn = false;
         lowVoltage = false;
         badEnv = false;
+        imageCounter = 0;
     }
 
     void configurePins() {
@@ -600,6 +596,35 @@ class SystemControl
         }
     }
 
+void triggerImage() {
+    digitalWrite(CAMERA_TRIG,HIGH);
+    delayMicroseconds(300);
+    switch(cfg.getInt(IMAGINGMODE)) {
+        case 0:
+            digitalWrite(WHITE_FLASH_TRIG,HIGH);
+            delayMicroseconds(cfg.getInt(WHITEFLASH));
+            digitalWrite(WHITE_FLASH_TRIG,LOW);
+            break;
+        case 1:
+            digitalWrite(UV_FLASH_TRIG,HIGH);
+            delayMicroseconds(cfg.getInt(UVFLASH));
+            digitalWrite(UV_FLASH_TRIG,LOW);
+            break;
+        case 2:
+            if (imageCounter % 2 == 0) {
+                digitalWrite(WHITE_FLASH_TRIG,HIGH);
+                delayMicroseconds(cfg.getInt(WHITEFLASH));
+                digitalWrite(WHITE_FLASH_TRIG,LOW);
+            }
+            else {
+                digitalWrite(UV_FLASH_TRIG,HIGH);
+                delayMicroseconds(cfg.getInt(UVFLASH));
+                digitalWrite(UV_FLASH_TRIG,LOW);
+            }
+            break;
+    }
+}   
+
 /** 
  * @brief Trigger the system using the settings in SP structure
  *
@@ -625,7 +650,7 @@ void triggerSystem() {
         case 0:
             digitalWrite(WHITE_FLASH_TRIG,HIGH);
             delayMicroseconds(cfg.getInt(WHITEFLASH));
-                digitalWrite(WHITE_FLASH_TRIG,LOW);
+            digitalWrite(WHITE_FLASH_TRIG,LOW);
             break;
         case 1:
             digitalWrite(UV_FLASH_TRIG,HIGH);
