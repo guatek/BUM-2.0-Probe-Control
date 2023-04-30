@@ -640,28 +640,33 @@ void triggerImage() {
         return;
     }
 
+    // Get variable before any timing events
+    int whiteFlashDelay = cfg.getInt(WHITEFLASH);
+    int uvFlashDelay = cfg.getInt(UVFLASH);
+    int imagingMode = cfg.getInt(IMAGINGMODE);
+
     digitalWrite(CAMERA_TRIG,HIGH);
     delayMicroseconds(300);
-    switch(cfg.getInt(IMAGINGMODE)) {
+    switch(imagingMode) {
         case 0:
             digitalWrite(WHITE_FLASH_TRIG,HIGH);
-            delayMicroseconds(cfg.getInt(WHITEFLASH));
+            delayMicroseconds(whiteFlashDelay);
             digitalWrite(WHITE_FLASH_TRIG,LOW);
             break;
         case 1:
             digitalWrite(UV_FLASH_TRIG,HIGH);
-            delayMicroseconds(cfg.getInt(UVFLASH));
+            delayMicroseconds(uvFlashDelay);
             digitalWrite(UV_FLASH_TRIG,LOW);
             break;
         case 2:
             if (imageCounter % 2 == 0) {
                 digitalWrite(WHITE_FLASH_TRIG,HIGH);
-                delayMicroseconds(cfg.getInt(WHITEFLASH));
+                delayMicroseconds(whiteFlashDelay);
                 digitalWrite(WHITE_FLASH_TRIG,LOW);
             }
             else {
                 digitalWrite(UV_FLASH_TRIG,HIGH);
-                delayMicroseconds(cfg.getInt(UVFLASH));
+                delayMicroseconds(uvFlashDelay);
                 digitalWrite(UV_FLASH_TRIG,LOW);
             }
             break;

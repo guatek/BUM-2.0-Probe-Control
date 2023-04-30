@@ -46,6 +46,12 @@ class Sensors {
             else {
                 DEBUGPORT.println("System INA260 OK");
             }
+
+            // set the number of samples to average
+            _ina260_sys.setAveragingCount(INA260_COUNT_256);
+            // set the time over which to measure the current and bus voltage
+            _ina260_sys.setVoltageConversionTime(INA260_TIME_558_us);
+            _ina260_sys.setCurrentConversionTime(INA260_TIME_558_us);
             
             
             // default settings
