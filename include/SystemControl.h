@@ -307,11 +307,13 @@ class SystemControl
         pinMode(LED2_EN, OUTPUT);
         pinMode(WHITE_FLASH_TRIG, OUTPUT);
         pinMode(UV_FLASH_TRIG, OUTPUT);
+        pinMode(CAMERA_TRIG, OUTPUT);
 
         digitalWrite(LED1_EN, LOW);
         digitalWrite(LED2_EN, LOW);
         digitalWrite(WHITE_FLASH_TRIG, LOW);
         digitalWrite(UV_FLASH_TRIG, LOW);
+        digitalWrite(CAMERA_TRIG, LOW);
     }
 
     bool begin() {
@@ -664,6 +666,8 @@ void triggerImage() {
             }
             break;
     }
+    imageCounter++;
+    digitalWrite(CAMERA_TRIG,LOW);
 }   
 
 };
