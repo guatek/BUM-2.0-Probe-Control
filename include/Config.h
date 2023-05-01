@@ -135,6 +135,8 @@ void SERCOM1_Handler()
 #define TESTFLASH "TESTFLASH"
 #define LOADSEQ "LOADSEQ"
 #define RUNSEQ "RUNSEQ"
+#define OPTOTUNE "OPTOTUNE"
+#define MOVELENS "MOVELENS"
 
 
 #endif

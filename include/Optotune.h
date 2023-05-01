@@ -15,10 +15,7 @@ private:
 
 Stream * port;
 char buffer[64];
-
-int sendCommand(char * cmd, int len) {
-    return port->println(cmd);
-}
+float position;
 
 public:
 
@@ -26,11 +23,46 @@ Optotune() {
 
 }
 
-void setPort(Stream * port) {
-    this->port = port;
+int sendCommand(char * cmd) {
+    port->print(cmd);
+    port->print("\r\n");
 }
 
-void move(int position) {
+void setPort(Stream * port) {
+    this->port = port;
+    // send the start command to the etl
+    sendCommand("start");
+    delay(25);
+    sendCommand("setfp=0.0");
+    position = 0.0;
+
+}
+
+void move(float newPosition, float inc = 0.05) {
+
+    char buffer[32];
+
+    if (newPosition < position) {
+        while (position > newPosition) { 
+            position -= inc;
+            sprintf(buffer,"setfp=%0.3f",position);
+            sendCommand(buffer);
+            //wait for reply
+            while (!port->available()) {};
+
+        }
+    }
+
+    if (newPosition > position) {
+        while (position < newPosition) { 
+            position += inc;
+            sprintf(buffer,"setfp=%0.3f",position);
+            sendCommand(buffer);
+            //wait for reply
+            while (!port->available()) {};
+            
+        }
+    }
     
 }
 
