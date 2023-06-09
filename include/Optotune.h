@@ -38,6 +38,15 @@ void setPort(Stream * port) {
 
 }
 
+void stepLens(float pos) {
+
+    if (pos >= -2.0 && pos <= 3.0) {
+        char buffer[32];
+        sprintf(buffer,"setfp=%0.3f",pos);
+        sendCommand(buffer);
+    }
+}
+
 void move(float newPosition, float inc = 0.05) {
 
     char buffer[32];

@@ -140,7 +140,17 @@ class SystemControl
                             }
                             
                         }
-                        // Break from look in set command since there is no CLI
+
+                        else if (cmd != NULL && strncmp_ci(cmd,STEPLENS,8) == 0) {
+                            float num;
+                            sscanf(rest,"%f",&num);
+                            if (num >= -2.0 && num < 3.0) {
+                                _etl.stepLens(num);
+                            }
+                            
+                        }
+
+                        // Break from loop in set command since there is no CLI
                         break;
                     }
                     // Handle backspace

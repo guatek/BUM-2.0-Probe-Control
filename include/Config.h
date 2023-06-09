@@ -138,6 +138,7 @@ void SERCOM1_Handler()
 #define RUNSEQ "RUNSEQ"
 #define OPTOTUNE "OPTOTUNE"
 #define MOVELENS "MOVELENS"
+#define STEPLENS "STEPLENS"
 
 
 #endif
