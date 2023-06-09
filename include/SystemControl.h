@@ -20,6 +20,7 @@
 #include "Sequence.h"
 
 #define CMD_CHAR '!'
+#define SET_CHAR '#'
 #define PROMPT "PCTL > "
 #define LOG_PROMPT "$PCTL"
 #define CMD_BUFFER_SIZE 128
@@ -90,6 +91,76 @@ class SystemControl
       
         if (in != NULL && in->available() > 0) {
             char c = in->read();
+
+            if (c == SET_CHAR) {
+                unsigned long startTimer = millis();
+                int index = 0;
+                while (startTimer <= millis() && millis() - startTimer < (unsigned int)(cfg.getInt("CMDTIMEOUT"))) {
+
+                    // Break if we have exceed the buffer size
+                    if (index >= CMD_BUFFER_SIZE)
+                        break;
+
+                    // Wait on user input
+                    if (in->available()) {
+                        // Read the next char and reset timer          
+                        c = in->read();
+                        startTimer = millis();
+                    }
+                    else {
+                        continue;
+                    }
+
+                    // Exit command loop on repeat command char
+                    if (c == CMD_CHAR) {
+                        break;
+                    }
+                    
+                    if (c == '\r') {
+                        // Command ended try to 
+                        if (index <= CMD_BUFFER_SIZE)
+                            cmdBuffer[index++] = '\0';
+                        else
+                            cmdBuffer[CMD_BUFFER_SIZE-1] = '\0';
+                        
+                        // Parse Command menus
+                        char * rest;
+                        char * cmd = strtok_r(cmdBuffer,",",&rest);
+
+                        // CFG (configuration commands)
+                        if (cmd != NULL && strncmp_ci(cmd,SET, 3) == 0) {
+                            if (rest != NULL) {
+                                cfg.parseConfigCommand(rest, in);
+                            }
+                            else {
+                                char timeString[64];
+                                getTimeString(timeString);
+                                cfg.printConfig(in, timeString);
+
+                            }
+                            
+                        }
+                        // Break from look in set command since there is no CLI
+                        break;
+                    }
+                    // Handle backspace
+                    if (c == '\b') {
+                        index -= 1;
+                        if (index < 0) {
+                            index = 0;
+                        }
+                        else if ( index >= 0 && cfg.getInt(LOCALECHO)) {
+                           in->write("\b \b");
+                        }
+                    }
+                    else {
+                        cmdBuffer[index++] = c;
+                        if (cfg.getInt(LOCALECHO))
+                            in->write(c);
+                    }
+                }
+            }
+
             if (c == CMD_CHAR) {
 
                 // Don't echo the command char

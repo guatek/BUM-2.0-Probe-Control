@@ -120,6 +120,7 @@ void SERCOM1_Handler()
 
 
 // Define Commands
+#define SET "SET"
 #define CFG "CFG"
 #define PORTPASS "PORTPASS"
 #define SETTIME "SETTIME"
