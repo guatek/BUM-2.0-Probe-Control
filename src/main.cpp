@@ -76,10 +76,6 @@ void setup() {
     sys.cfg.addParam(TEMPLIMIT, "Temerature in C where controller will shutdown and power off camera","C", 0, 80, 55);
     sys.cfg.addParam(HUMLIMIT, "Humidity in % where controller will shutdown and power off camera","%", 0, 100, 60);
 
-
-    // configure watchdog timer if enabled
-    sys.configWatchdog();
-
     // Start the remaining serial ports
     HWPORT0.begin(sys.cfg.getInt(HWPORT0BAUD));
     HWPORT1.begin(sys.cfg.getInt(HWPORT1BAUD));
@@ -91,6 +87,9 @@ void setup() {
     // Load the last config from EEPROM
     sys.readConfig();
 
+    // configure watchdog timer if enabled
+    sys.configWatchdog();
+
     // Setup flashes triggers and polling
     setFlashes();
     setTriggers();
@@ -98,6 +97,8 @@ void setup() {
 }
 
 void loop() {
+
+    sys.clearWatchdog();
 
     sys.update();
     sys.checkInput();

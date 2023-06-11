@@ -97,6 +97,10 @@ class SystemControl
                 int index = 0;
                 while (startTimer <= millis() && millis() - startTimer < (unsigned int)(cfg.getInt("CMDTIMEOUT"))) {
 
+                    if (cfg.getInt(WATCHDOG) > 0) {
+                        _watchdog.clear();
+                    }
+
                     // Break if we have exceed the buffer size
                     if (index >= CMD_BUFFER_SIZE)
                         break;
@@ -193,6 +197,10 @@ class SystemControl
                 unsigned long startTimer = millis();
                 int index = 0;
                 while (startTimer <= millis() && millis() - startTimer < (unsigned int)(cfg.getInt("CMDTIMEOUT"))) {
+
+                    if (cfg.getInt(WATCHDOG) > 0) {
+                        _watchdog.clear();
+                    }
 
                     // Break if we have exceed the buffer size
                     if (index >= CMD_BUFFER_SIZE)
@@ -505,6 +513,13 @@ class SystemControl
         }
     }
 
+    void clearWatchdog() {
+        // clear watchdog timer if requested
+        if (cfg.getInt(WATCHDOG) > 0) {
+            _watchdog.clear();
+        }
+    }
+
     bool turnOnCamera() {
         if (_zerortc.getEpoch() - lastPowerOffTime > (unsigned int)cfg.getInt(CAMGUARD) && !cameraOn) {
             DEBUGPORT.println("Turning ON camera power...");
@@ -573,7 +588,7 @@ class SystemControl
 
         // The system log string, note this requires enabling printf_float build
         // option work show any output for floating point values
-        sprintf(output, "%s,%s.%03u,%0.3f,%0.3f,%0.2f,%0.2f,%0.2f",
+        sprintf(output, "%s,%s.%03u,%0.3f,%0.3f,%0.2f,%0.2f,%0.2f,%d",
 
             LOG_PROMPT,
             timeString,
@@ -582,7 +597,8 @@ class SystemControl
             _sensors.pressure / 1000.0, // in kPa
             _sensors.humidity, // in %
             _sensors.voltage[0] / 1000.0, // In Volts
-            _sensors.power[0] / 1000.0 // in W
+            _sensors.power[0] / 1000.0, // in W
+            int(cameraOn)
             
         );
 
