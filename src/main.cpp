@@ -24,6 +24,11 @@ void setFlashes() {
 
 void setup() {
 
+    pinMode(10,OUTPUT);
+    digitalWrite(10,HIGH);
+    pinMode(12,OUTPUT);
+    digitalWrite(12,HIGH);
+
     // Place a delay before we start any setup to prevent haning the USB bus
     // on a stuck processor
     delay(2000);
@@ -80,7 +85,6 @@ void setup() {
     HWPORT1.begin(sys.cfg.getInt(HWPORT1BAUD));
     HWPORT2.begin(sys.cfg.getInt(HWPORT2BAUD));
     HWPORT3.begin(sys.cfg.getInt(HWPORT3BAUD));
-
     // Config the SERCOM muxes AFTER starting the ports
     configSerialPins();
 

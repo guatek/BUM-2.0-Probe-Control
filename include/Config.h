@@ -77,9 +77,9 @@ void SERCOM1_Handler()
 
 // Mapping serial ports to UI ports
 #define UI1 HWPORT0
-#define UI2 HWPORT2
+#define UI2 HWPORT1
 #define JETSONPORT HWPORT1
-#define RBRPORT HWPORT3
+#define RBRPORT HWPORT1
 
 // Define Config Settings
 #define LOGINT "LOGINT"
@@ -139,6 +139,7 @@ void SERCOM1_Handler()
 #define OPTOTUNE "OPTOTUNE"
 #define MOVELENS "MOVELENS"
 #define STEPLENS "STEPLENS"
+#define FOCALSWEEP "FOCALSWEEP"
 
 
 #endif

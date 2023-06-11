@@ -145,7 +145,16 @@ class SystemControl
                             float num;
                             sscanf(rest,"%f",&num);
                             if (num >= -2.0 && num < 3.0) {
-                                _etl.stepLens(num);
+                                _etl.step(num);
+                            }
+                            
+                        }
+
+                        else if (cmd != NULL && strncmp_ci(cmd,MOVELENS,8) == 0) {
+                            float num, inc;
+                            sscanf(rest,"%f,%f",&num,&inc);
+                            if (num >= -2.0 && num < 3.0) {
+                                _etl.move(num, inc);
                             }
                             
                         }
@@ -290,6 +299,9 @@ class SystemControl
                             _etl.sendCommand(rest);
                         }
 
+						else if (cmd != NULL && strncmp_ci(cmd,FOCALSWEEP,8) == 0) {
+                            _etl.focalSweep();
+                        }
                         else if (cmd != NULL && strncmp_ci(cmd,MOVELENS,8) == 0) {
                             float num;
                             sscanf(rest,"%f",&num);
@@ -298,7 +310,19 @@ class SystemControl
                             }
                             
                         }
+						
+						else if (cmd != NULL && strncmp_ci(cmd,STEPLENS,8) == 0) {
+                            float num;
+                            sscanf(rest,"%f",&num);
+                            if (num >= -2.0 && num < 3.0) {
+                                _etl.step(num);
+                            }
+                            
+                        }
 
+                        else if (cmd != NULL && strncmp_ci(cmd,"resetopto",9) == 0) {
+                            sendBreak();
+                        }
                         // Reset the buffer and print out the prompt
                         if (c == '\n')
                             in->write('\r');
@@ -409,6 +433,19 @@ class SystemControl
         digitalWrite(UV_FLASH_TRIG, LOW);
         digitalWrite(CAMERA_TRIG, LOW);
     }
+    
+	void sendBreak() {
+	        HWPORT3.end();
+	        delay(1000);
+	        pinMode(10,INPUT);
+	        digitalWrite(10,HIGH);
+	        pinMode(12,INPUT);
+	        digitalWrite(12,HIGH);
+	        delay(1000);
+	        HWPORT3.begin(cfg.getInt(HWPORT3BAUD));
+	        pinPeripheral(12, PIO_SERCOM);
+	        pinPeripheral(10, PIO_SERCOM);
+    }
 
     bool begin() {
 
@@ -452,10 +489,6 @@ class SystemControl
         // Start sensors
         _sensors.begin();
 
-        // Setup ETL and sequence processor
-        // Iniitialize the ETL
-        _etl.setPort(&HWPORT3);
-
         // Initialize sequences
         for (int i = 0; i < MAX_MACROS; i++) {
             _seq[i].init(&cfg, &_etl);
@@ -478,6 +511,11 @@ class SystemControl
             cameraOn = true;
             digitalWrite(LED1_EN, HIGH);
             digitalWrite(LED2_EN, HIGH);
+
+            delay(1000);
+
+            // Setup ETL after opening hardware serial port
+            _etl.setPort(&HWPORT3);
 
             lastPowerOnTime = _zerortc.getEpoch();
             return true;
